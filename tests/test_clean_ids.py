@@ -1,7 +1,7 @@
 import sys
 import io
 import pytest
-from bin.clean_ids import main
+from bin.clean_ids import main, is_valid_id
 
 def test_script_execution(monkeypatch, capsys):
     fake_input = io.StringIO("kcFsuxaJ1es\nasd123\n")
@@ -24,14 +24,13 @@ def test_good_bad_good(monkeypatch, capsys):
 def test_all_bad(monkeypatch, capsys):
     assert run_filter(monkeypatch, capsys, "abc\n1234\n") == ""
 
-def test_10_chars_rejected(monkeypatch, capsys):
-    assert run_filter(monkeypatch, capsys, "kcFsuxaJ1e\n") == ""
-
-def test_12_chars_rejected(monkeypatch, capsys):
-    assert run_filter(monkeypatch, capsys, "kcFsuxaJ1esX\n") == ""
-
-def test_invalid_characters(monkeypatch, capsys):
-    assert run_filter(monkeypatch, capsys, "kcFsuxaJ1e!\n") == ""
-
-def test_hyphen_underscore_ok(monkeypatch, capsys):
-    assert run_filter(monkeypatch, capsys, "a-b_c-d_e-f\n") == "a-b_c-d_e-f\n"
+@pytest.mark.parametrize("candidate,expected", [
+    ("kcFsuxaJ1es", True),     # valid 11-char id
+    ("kcFsuxaJ1e", False),     # 10 chars, too short
+    ("kcFsuxaJ1esX", False),   # 12 chars, too long
+    ("kcFsuxaJ1e!", False),    # right length, bad character
+    ("a-b_c-d_e-f", True),     # hyphen and underscore are legal
+    ("", False),               # empty line
+])
+def test_is_valid_id(candidate, expected):
+    assert is_valid_id(candidate) == expected
