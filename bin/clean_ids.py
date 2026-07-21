@@ -11,7 +11,11 @@ import logging
 
 logging.basicConfig(filename="pipeline_autid.log", level=logging.INFO)
 
-pattern = re.compile("^[A-Za-z0-9_-]{11}$")
+PATTERN = re.compile("^[A-Za-z0-9_-]{11}$")
+
+def is_valid_id(candidate):
+    """Return True if candidate is a valid 11-char YouTube ID."""
+    return bool(PATTERN.match(candidate))
 
 
 def main():
@@ -19,7 +23,7 @@ def main():
     try:
         for line in sys.stdin:
             candidate = line.strip()
-            if pattern.match(candidate):
+            if is_valid_id(candidate):
                 print(candidate)
             else:
                 logging.info("invalid id: %s", candidate)
