@@ -3,3 +3,5 @@ numpy
 pylint
 pytest
 pytest
+python-dotenv
+youtube-transcript-api
