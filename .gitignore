@@ -6,3 +6,6 @@ cleaned_ids.txt
 .env
 pipeline/logs/*
 !pipeline/logs/.gitkeep
+logs/
+logs/
+logs/
