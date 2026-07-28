@@ -8,6 +8,8 @@ import sys
 import os
 import json
 import logging
+from abc import ABC, abstractmethod
+
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -21,6 +23,17 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+# =====================================================================
+# 1. THE ENRICHMENT CONTRACT (Interface)
+# =====================================================================
+class TranscriptEnricher(ABC):  # pylint: disable=too-few-public-methods
+    """Invariant contract every enrichment provider must satisfy."""
+
+    @abstractmethod
+    def enrich(self, video_id: str, raw_text: str) -> dict:
+        """Accept a video id and raw transcript, return an enriched record dict."""
+
 def main():
     """Read transcript records from stdin, enrich via Gemini, emit JSONL to stdout."""
     logging.info("Pipeline Step 2B (Gemini Enrichment) started.")
