@@ -13,8 +13,7 @@ import logging
 from abc import ABC, abstractmethod
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+
 
 
 
@@ -75,6 +74,7 @@ class GeminiEnricher(TranscriptEnricher):  # pylint: disable=too-few-public-meth
     }
 
     def __init__(self, model: str = "gemini-2.5-flash"):
+        from google import genai  # pylint: disable=import-outside-toplevel
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY not found in environment.")
@@ -82,6 +82,7 @@ class GeminiEnricher(TranscriptEnricher):  # pylint: disable=too-few-public-meth
         self.client = genai.Client(api_key=api_key)
 
     def enrich(self, video_id: str, raw_text: str) -> dict:
+        from google.genai import types  # pylint: disable=import-outside-toplevel
         prompt = (
             f"You are an elite data engineer. Clean this transcript text for "
             f"video_id '{video_id}'.\n"
