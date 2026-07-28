@@ -54,6 +54,51 @@ class ClaudeEnricher(TranscriptEnricher):  # pylint: disable=too-few-public-meth
             "book_names": [],
         }
 
+# =====================================================================
+# 3. STRATEGY B: THE LIVE GEMINI ENRICHER (Structured JSON Output)
+# =====================================================================
+class GeminiEnricher(TranscriptEnricher):  # pylint: disable=too-few-public-methods
+    """Live enrichment via the Gemini API under a strict response schema."""
+
+    RESPONSE_SCHEMA = {
+        "type": "OBJECT",
+        "properties": {
+            "video_id": {"type": "STRING"},
+            "cleaned_text": {"type": "STRING"},
+            "tech_terms": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "book_names": {"type": "ARRAY", "items": {"type": "STRING"}},
+        },
+        "required": ["video_id", "cleaned_text"],
+    }
+
+    def __init__(self, model: str = "gemini-2.5-flash"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY not found in environment.")
+        self.model = model
+        self.client = genai.Client(api_key=api_key)
+
+    def enrich(self, video_id: str, raw_text: str) -> dict:
+        prompt = (
+            f"You are an elite data engineer. Clean this transcript text for "
+            f"video_id '{video_id}'.\n"
+            "1. Strip all timestamps and duration codes.\n"
+            "2. Extract technical architecture terms and books."
+        )
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=f"{prompt}\n\nTRANSCRIPT:\n{raw_text}",
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=self.RESPONSE_SCHEMA,
+                ),
+            )
+            return json.loads(response.text)
+        # Wrap provider faults in a neutral error so the engine stays provider-agnostic.
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            raise RuntimeError(f"Gemini enrichment failed for {video_id}: {e}") from e
+
 def main():
     """Read transcript records from stdin, enrich via Gemini, emit JSONL to stdout."""
     logging.info("Pipeline Step 2B (Gemini Enrichment) started.")
