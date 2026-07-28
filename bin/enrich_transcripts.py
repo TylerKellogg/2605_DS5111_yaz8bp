@@ -8,12 +8,15 @@ import sys
 import os
 import re
 import json
+import argparse
 import logging
 from abc import ABC, abstractmethod
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+
+
 
 # Load environmental configurations from local workspace files
 load_dotenv()
@@ -134,71 +137,37 @@ class EnrichmentEngine:  # pylint: disable=too-few-public-methods
             except RuntimeError as e:
                 logging.error("Failed processing video %s: %s", video_id, e)
 
-def main():
-    """Read transcript records from stdin, enrich via Gemini, emit JSONL to stdout."""
-    logging.info("Pipeline Step 2B (Gemini Enrichment) started.")
+# =====================================================================
+# 5. RUNTIME ENTRYPOINT
+# =====================================================================
+def main(argv=None):
+    """Parse args, select an enrichment strategy, and run the stdin stream."""
+    logging.info("Pipeline Step 2B (LLM Enrichment) started.")
 
+    parser = argparse.ArgumentParser(description="Multi-Provider Transcript Enrichment Node.")
+    parser.add_argument(
+        "--model",
+        choices=["gemini", "claude"],
+        default="gemini",
+        help="Target LLM enrichment provider strategy (defaults to gemini).",
+    )
+    args = parser.parse_args(argv)
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        logging.critical("GEMINI_API_KEY not found in environment. Terminating pipeline.")
+    try:
+        if args.model == "claude":
+            selected_strategy = ClaudeEnricher()
+        else:
+            selected_strategy = GeminiEnricher()
+    # Provider setup failure is fatal --- there is nothing to stream without a client.
+    except RuntimeError as e:
+        logging.critical("Enrichment strategy initialization failed: %s", e)
         sys.exit(1)
-    client = genai.Client(api_key=api_key)
 
-
-    response_schema = {
-        "type": "OBJECT",
-        "properties": {
-            "video_id": {"type": "STRING"},
-            "cleaned_text": {"type": "STRING"},
-            "tech_terms": {"type": "ARRAY", "items": {"type": "STRING"}},
-            "book_names": {"type": "ARRAY", "items": {"type": "STRING"}},
-        },
-        "required": ["video_id", "cleaned_text"],
-    }
-
-
-    # Stream processing framework reading line-by-line text inputs from stdin
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-
-
-        try:
-            payload = json.loads(line)
-            video_id = payload["video_id"]
-            raw_text = payload["raw_text"]
-        # One corrupt row must not kill the stream ---- log  and continue.
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to parse incoming JSON payload row: %s", e)
-            continue
-
-        logging.info("Orchestrating Gemini enrichment for video: %s", video_id)
-
-        prompt = f"""
-        You are an elite data engineer. Clean this transcript text for video_id '{video_id}'.
-        1. Strip all timestamps and duration codes.
-        2. Extract technical architecture terms and books.
-        """
-
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=f"{prompt}\n\nTRANSCRIPT:\n{raw_text}",
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=response_schema,
-                ),
-            )
-            enriched = json.loads(response.text)
-            sys.stdout.write(json.dumps(enriched) + "\n")
-            sys.stdout.flush()
-        # A single failed generation must not abort the remaining records.
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logging.error("Failed processing video %s during LLM generation: %s", video_id, e)
+    engine = EnrichmentEngine(selected_strategy)
+    engine.run_stream()
 
     logging.info("Pipeline Step 2B finished.")
+
 
 if __name__ == '__main__':
     main()
