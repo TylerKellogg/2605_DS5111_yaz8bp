@@ -99,6 +99,41 @@ class GeminiEnricher(TranscriptEnricher):  # pylint: disable=too-few-public-meth
         except Exception as e:  # pylint: disable=broad-exception-caught
             raise RuntimeError(f"Gemini enrichment failed for {video_id}: {e}") from e
 
+# =====================================================================
+# 4. THE INVARIANT PIPELINE CONTEXT (The Streaming Engine)
+# =====================================================================
+class EnrichmentEngine:  # pylint: disable=too-few-public-methods
+    """Provider-agnostic stream runner: stdin JSONL -> enriched JSONL on stdout."""
+
+    def __init__(self, strategy: TranscriptEnricher):
+        self.strategy = strategy
+
+    def run_stream(self):
+        """Enrich each stdin record, emitting results and surviving bad rows."""
+        for line in sys.stdin:
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                payload = json.loads(line)
+                video_id = payload["video_id"]
+                raw_text = payload["raw_text"]
+            # One corrupt row must not kill the stream --- log and continue.
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logging.error("Failed to parse incoming JSON payload row: %s", e)
+                continue
+
+            logging.info("Orchestrating enrichment for video: %s", video_id)
+
+            try:
+                enriched = self.strategy.enrich(video_id, raw_text)
+                sys.stdout.write(json.dumps(enriched) + "\n")
+                sys.stdout.flush()
+            # A single failed generation must not abort the remaining records.
+            except RuntimeError as e:
+                logging.error("Failed processing video %s: %s", video_id, e)
+
 def main():
     """Read transcript records from stdin, enrich via Gemini, emit JSONL to stdout."""
     logging.info("Pipeline Step 2B (Gemini Enrichment) started.")
