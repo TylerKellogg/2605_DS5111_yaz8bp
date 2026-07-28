@@ -6,6 +6,7 @@ response schema, and emits schema-compliant enriched records to stdout.
 """
 import sys
 import os
+import re
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -33,6 +34,25 @@ class TranscriptEnricher(ABC):  # pylint: disable=too-few-public-methods
     @abstractmethod
     def enrich(self, video_id: str, raw_text: str) -> dict:
         """Accept a video id and raw transcript, return an enriched record dict."""
+
+
+# 2. STRATEGY A: THE CLAUDE ENRICHER (Mock Stub — No Network)
+# =====================================================================
+class ClaudeEnricher(TranscriptEnricher):  # pylint: disable=too-few-public-methods
+    """Deterministic stand-in for a live Claude enrichment call."""
+
+    def __init__(self, model: str = "claude-mock-v1"):
+        self.model = model
+
+    def enrich(self, video_id: str, raw_text: str) -> dict:
+        # Local stand-in for the provider's timestamp-stripping instruction.
+        cleaned = re.sub(r"\b\d{1,2}:\d{2}\b", "", raw_text)
+        return {
+            "video_id": video_id,
+            "cleaned_text": " ".join(cleaned.split()),
+            "tech_terms": [],
+            "book_names": [],
+        }
 
 def main():
     """Read transcript records from stdin, enrich via Gemini, emit JSONL to stdout."""
