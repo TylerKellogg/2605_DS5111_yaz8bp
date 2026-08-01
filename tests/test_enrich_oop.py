@@ -7,6 +7,7 @@ from bin.enrich_transcripts import (
     ClaudeEnricher,
     TranscriptEnricher,
     EnrichmentEngine,
+    main,
 )
 
 
@@ -41,3 +42,18 @@ def test_engine_streams_and_survives_bad_rows(monkeypatch, capsys):
     out = capsys.readouterr().out.strip().split("\n")
     assert len(out) == 1
     assert json.loads(out[0]) == {"video_id": "v1", "cleaned_text": "HELLO"}
+
+
+def test_main_claude_path_streams_records(monkeypatch, capsys):
+    """--model claude runs end to end with no API key and no SDK patching."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    row = {"video_id": "ds5111_v001", "raw_text": "00:01 Testing the mock stub."}
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(row) + "\n"))
+
+    main(["--model", "claude"])
+
+    out = capsys.readouterr().out.strip().split("\n")
+    assert len(out) == 1
+    parsed = json.loads(out[0])
+    assert parsed["video_id"] == "ds5111_v001"
+    assert parsed["cleaned_text"] == "Testing the mock stub."
