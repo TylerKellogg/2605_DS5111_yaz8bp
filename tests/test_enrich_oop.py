@@ -3,7 +3,7 @@ import sys
 import io
 import json
 
-from bin.enrich_transcripts import (
+from lib.enrichment import (
     ClaudeEnricher,
     TranscriptEnricher,
     EnrichmentEngine,

@@ -8,8 +8,8 @@ update:  env
 	. env/bin/activate; pip install -r requirements.txt
 
 lint:
-	. env/bin/activate; pylint bin/clean_ids.py bin/extract_transcripts.py bin/enrich_transcripts.py
-
+	. env/bin/activate; pylint bin/ lib/
+	
 test: lint
 	. env/bin/activate; pytest -vv tests
 

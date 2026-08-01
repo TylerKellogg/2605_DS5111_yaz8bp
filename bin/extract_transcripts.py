@@ -18,7 +18,7 @@ from youtube_transcript_api.proxies import WebshareProxyConfig
 load_dotenv()
 
 logging.basicConfig(
-    filename='pipeline/logs/pipeline_audit.log',
+    filename='logs/pipeline_audit.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
