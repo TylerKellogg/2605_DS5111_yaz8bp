@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Enrich raw YouTube transcripts from stdin using the Gemini API.
+"""Enrich raw YouTube transcripts from stdin using a pluggable LLM provider.
 
-Reads JSON Lines records, sends each transcript to Gemini under a strict
+Reads JSON Lines records, delegates enrichment to a selected strategy under a strict
 response schema, and emits schema-compliant enriched records to stdout.
 """
 import sys
