@@ -1,105 +1,35 @@
-# 2605_DS5111_yaz8bp — VM Setup
-## Starting point / prerequisites
-This guide assumes you already have:
+# 2605_DS5111_yaz8bp
 
-- A new AWS EC2 VM running **Ubuntu Server 26.04**.
-- A GitHub SSH key on the VM that can connect to GitHub.
-- Access to this project repository.
-- Git available on the VM so you can clone the repo.
+YouTube transcript pipeline: clean IDs, extract transcripts, enrich via LLM, validate against a schema contract.
 
-This README starts after the VM is running. It does not cover launching the AWS instance.
+## Structure
 
-## Setup steps
-### 1. Clone the repo
+| Path | Purpose |
+| --- | --- |
+| `bin/` | Executable entry points and VM bootstrap scripts |
+| `lib/` | Importable modules (`enrichment.py`: strategy-pattern LLM enrichment) |
+| `tests/` | Pytest suite: unit, parametrized, skipif, xfail |
+| `.github/workflows/` | CI: parallel lint/test jobs, Python version matrix, all via `make` |
 
-From the VM home directory, run:
+## Pipeline
 
-```bash
-git clone git@github.com:<your-github-username>/2605_DS5111_yaz8bp.git
-cd 2605_DS5111_yaz8bp
-```
+Each stage reads stdin, writes JSONL to stdout; diagnostics go to `logs/`, never stdout.
 
-Replace `<your-github-username>` with your GitHub username.
+    cat ids | bin/clean_ids.py | bin/extract_transcripts.py | bin/enrich_transcripts.py | bin/validate_schema.py
 
-### 2. Run the bootstrap script
+## Environment
 
-From the repo root, run:
+| Variable | Used by |
+| --- | --- |
+| `WEBSHARE_USER` / `WEBSHARE_PASSWORD` | `extract_transcripts.py` (proxy for cloud IPs) |
+| `GEMINI_API_KEY` | `GeminiEnricher` only; `--model claude` needs no credentials |
 
-```bash
-chmod +x scripts/init.sh
-bash scripts/init.sh
-```
+Put credentials in `.env` at repo root (gitignored).
 
-The script updates the VM package list and installs:
+## Setup
 
-- `make`
-- `python3.14-venv`
-- `tree`
+    git clone git@github.com:TylerKellogg/2605_DS5111_yaz8bp.git && cd 2605_DS5111_yaz8bp
+    make update      # venv + dependencies
+    make test        # lint + full suite, offline-safe
 
-**Test it worked:**
-
-```bash
-tree scripts
-```
-
-You should see the `scripts` directory printed in tree form:
-
-```text
-scripts
-├── init.sh
-└── init_git_creds.sh
-```
-
-Because `tree` is one of the tools `init.sh` installs, seeing this output instead of `command not found` confirms the script ran successfully.
-
-### 3. Set up git credentials
-
-From the repo root, run:
-
-```bash
-chmod +x scripts/init_git_creds.sh
-bash scripts/init_git_creds.sh
-```
-
-The script sets your global Git email and username so commits are labeled correctly.
-
-**Test it worked:**
-
-```bash
-git config --global --list
-```
-
-You should see your GitHub email and username:
-
-```text
-user.email=your-email@example.com
-user.name=your-github-username
-```
-
-### 4. Build the Python environment
-
-From the repo root, run:
-
-```bash
-make update
-```
-
-This creates the `env/` virtual environment, upgrades `pip`, and installs the packages in `requirements.txt`.
-
-**Test it worked:**
-
-```bash
-. env/bin/activate
-pip list
-```
-
-After activating the environment, the terminal prompt should start with `(env)`.
-
-After `pip list`, you should see packages from `requirements.txt`, including:
-
-```text
-numpy
-pandas
-```
-
-At this point, the VM is ready for this project.
+`make` with no target lists all lifecycle commands: `env`, `update`, `lint`, `test`, `run`, `test_enrich`.
