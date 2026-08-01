@@ -1,5 +1,13 @@
 """Unit tests for the OOP strategy-pattern enrichment components."""
-from bin.enrich_transcripts import ClaudeEnricher
+import sys
+import io
+import json
+
+from bin.enrich_transcripts import (
+    ClaudeEnricher,
+    TranscriptEnricher,
+    EnrichmentEngine,
+)
 
 
 def test_claude_enricher_strips_timestamps():
@@ -11,3 +19,25 @@ def test_claude_enricher_strips_timestamps():
     assert "00:01" not in result["cleaned_text"]
     assert result["cleaned_text"].startswith("Welcome back to class!")
     assert result["tech_terms"] == []
+
+class FakeEnricher(TranscriptEnricher):  # pylint: disable=too-few-public-methods
+    """Provider-free strategy proving the engine needs no SDK to be tested."""
+
+    def enrich(self, video_id: str, raw_text: str) -> dict:
+        return {"video_id": video_id, "cleaned_text": raw_text.upper()}
+
+
+def test_engine_streams_and_survives_bad_rows(monkeypatch, capsys):
+    """Engine emits good records and skips corrupt ones without aborting."""
+    rows = [
+        json.dumps({"video_id": "v1", "raw_text": "hello"}),
+        "{not valid json",
+        json.dumps({"video_id": "v2"}),
+    ]
+    monkeypatch.setattr(sys, "stdin", io.StringIO("\n".join(rows) + "\n"))
+
+    EnrichmentEngine(FakeEnricher()).run_stream()
+
+    out = capsys.readouterr().out.strip().split("\n")
+    assert len(out) == 1
+    assert json.loads(out[0]) == {"video_id": "v1", "cleaned_text": "HELLO"}
