@@ -32,7 +32,7 @@ def test_enrich_transcripts_streaming_pipeline(monkeypatch, capsys):
     mock_stdin = io.StringIO(json.dumps(mock_input_row) + "\n")
     monkeypatch.setattr(sys, "stdin", mock_stdin)
 
-    main()
+    main([])
 
     captured = capsys.readouterr()
     stdout_lines = captured.out.strip().split("\n")
