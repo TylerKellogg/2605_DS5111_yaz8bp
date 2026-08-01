@@ -1,7 +1,9 @@
 """Unit tests for the OOP strategy-pattern enrichment components."""
 import sys
 import io
+import os
 import json
+import pytest
 
 from lib.enrichment import (
     ClaudeEnricher,
@@ -57,3 +59,23 @@ def test_main_claude_path_streams_records(monkeypatch, capsys):
     parsed = json.loads(out[0])
     assert parsed["video_id"] == "ds5111_v001"
     assert parsed["cleaned_text"] == "Testing the mock stub."
+
+@pytest.mark.skipif(
+    os.getenv("GEMINI_API_KEY") is None,
+    reason="GeminiEnricher construction requires a live API key in the environment",
+)
+def test_gemini_enricher_constructs_with_key():
+    """GeminiEnricher initializes when credentials are present (skipped in CI)."""
+    enricher = GeminiEnricher()
+    assert enricher.model == "gemini-2.5-flash"
+
+
+@pytest.mark.xfail(
+    reason="ClaudeEnricher is a stub: it does not yet extract tech terms",
+    strict=True,
+)
+def test_claude_enricher_extracts_tech_terms():
+    """Documents a known stub limitation; will flip to passing when Claude goes live."""
+    enricher = ClaudeEnricher()
+    result = enricher.enrich("ds5111_v001", "00:01 We discussed Kubernetes today.")
+    assert "Kubernetes" in result["tech_terms"]
