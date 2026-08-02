@@ -7,6 +7,7 @@ import pytest
 
 from lib.enrichment import (
     ClaudeEnricher,
+    GeminiEnricher,
     TranscriptEnricher,
     EnrichmentEngine,
     main,
