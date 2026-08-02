@@ -7,4 +7,5 @@ cleaned_ids.txt
 logs/
 logs/
 logs/
-data/
+data/*
+!data/youtube_ids.txt
