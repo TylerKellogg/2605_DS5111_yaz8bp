@@ -21,3 +21,7 @@ run:
 test_enrich:
 	$(VENV_ACTIVATE); cat mock_transcripts.jsonl | python -u bin/enrich_transcripts.py --model claude | python bin/validate_schema.py
 
+.PHONY: load
+load:
+	@echo "Initiating Cloud Data Warehouse Synchronizer Node..."
+	$(VENV_ACTIVATE); cat data/enriched_transcripts.jsonl | python bin/load_snowflake.py
