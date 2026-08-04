@@ -4,8 +4,7 @@ pipeline_autid.log
 test_ids
 cleaned_ids.txt
 .env
-pipeline/logs/*
-!pipeline/logs/.gitkeep
 logs/
 logs/
 logs/
+data/

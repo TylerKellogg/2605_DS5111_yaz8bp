@@ -2,7 +2,7 @@ import sys
 import io
 import json
 import pytest
-from bin.enrich_transcripts import main
+from lib.enrichment import main
 
 
 class MockGeminiResponse:
