@@ -5,3 +5,5 @@ pytest
 pytest
 python-dotenv
 youtube-transcript-api
+jupyterlab
+google-genai
